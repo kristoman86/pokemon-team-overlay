@@ -48,7 +48,7 @@ ASSETS = {
 </head>
 <body data-page="settings">
   <header><div><small>STREAM TOOLS / PMDCOLLAB · V2</small><h1>Pokémon Team</h1></div>
-    <a href="overlay.html" target="_blank" rel="noopener">Open overlay ↗</a></header>
+    <div class="header-actions"><button id="copy-obs-url" class="secondary" type="button">Copy OBS URL</button><a href="overlay.html" target="_blank" rel="noopener">Open overlay ↗</a></div></header>
   <main class="workspace">
     <section class="panel controls">
       <h2>ADD POKEMON TO TEAM</h2>
@@ -120,6 +120,7 @@ ASSETS = {
 body { margin: 0; background: var(--ink); color: #edf3fb; }
 header, footer { max-width: 1380px; margin: auto; padding: 26px 28px; }
 header, .section-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 small { color: var(--gold); letter-spacing: .15em; font-size: .75rem; }
 h1 { font-size: 2rem; margin: 3px 0 0; letter-spacing: -.04em; }
 h2 { font-size: .88rem; letter-spacing: .1em; margin: 0 0 20px; }
@@ -464,6 +465,16 @@ async function perform(patch,success) { try {await update(patch); if(success)mes
 function downloadJSON(value,name) {
   const blob=new Blob([JSON.stringify(value,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+async function copyText(value) {
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
+    else {
+      const field=document.createElement('textarea');field.value=value;field.style.position='fixed';field.style.opacity='0';document.body.append(field);field.select();
+      if(!document.execCommand('copy'))throw new Error('Copy unavailable');field.remove();
+    }
+    return true;
+  } catch { return false; }
+}
 function currentTeam() {return {slots:state.slots,layout:state.layout,style:styleState(),challenge:challengeState(),hunt:huntState()};}
 async function textFetch(url) {const r=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!r.ok)throw new Error('Source unavailable');return r.text();}
 async function loadCredits() {
@@ -482,6 +493,7 @@ async function loadCredits() {
   } finally {if(request===creditRequest)$('refresh-credits').disabled=false;}
 }
 function wireFeatures() {
+  $('copy-obs-url').onclick=async()=>{const url=new URL('/overlay.html',location.href).href;const copied=await copyText(url);message(copied?'OBS URL copied.':`Copy this OBS URL: ${url}`,!copied);};
   $('style-form').onsubmit=e=>{e.preventDefault();perform({style:{frame:$('frame-color').value,fill:$('tile-color').value,size:Number($('tile-size').value),gap:Number($('tile-gap').value),hideEmpty:$('hide-empty').checked,labels:$('show-labels').checked}},'Overlay styling updated.');};
   $('reset-style').onclick=()=>perform({style:DEFAULT_STYLE},'Styling reset.');
   $('save-team-form').onsubmit=e=>{e.preventDefault();const name=$('team-name').value.trim();if(!name)return;if(Object.hasOwn(state.presets||{},name)&&!confirm(`Replace saved team “${name}”?`))return;perform({saveTeam:name},`Saved “${name}”.`);};
